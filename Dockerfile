@@ -1,8 +1,24 @@
-FROM maven:latest
-LABEL author="phongle"
+
+FROM eclipse-temurin:21-jdk
 
 WORKDIR /app
-COPY pom.xml /app
-COPY . /app
-RUN mvn package
-CMD ["java", "-jar", "target/bmi.jar"]
+# Install GUI libraries
+RUN apt-get update && apt-get install -y \
+    libx11-6 libxext6 libxrender1 libxtst6 libxi6 libgtk-3-0 mesa-utils wget unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and unzip JavaFX Linux SDK
+RUN mkdir -p /javafx-sdk \
+    && wget -O javafx.zip https://download2.gluonhq.com/openjfx/21.0.2/openjfx-21.0.2_linux-x64_bin-sdk.zip \
+    && unzip javafx.zip -d /javafx-sdk \
+    && mv /javafx-sdk/javafx-sdk-21.0.2/lib /javafx-sdk/lib \
+    && rm -rf /javafx-sdk/javafx-sdk-21.0.2 javafx.zip
+
+# Copy your fat JAR
+COPY target/inclass_week2-1.0-SNAPSHOT.jar app.jar
+
+# 6️⃣ Set DISPLAY so the GUI can open via X11
+ENV DISPLAY=host.docker.internal:0.0
+
+# 7️⃣ Run your JavaFX BMI app
+CMD ["java", "--module-path", "/javafx-sdk/lib", "--add-modules", "javafx.controls,javafx.fxml", "-jar", "app.jar"]
