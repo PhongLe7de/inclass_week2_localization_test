@@ -6,13 +6,19 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 
+import java.text.DecimalFormat;
 import java.util.Locale;
+import java.util.Map;
 import java.util.ResourceBundle;
 
 public class BMIController {
 
     private double resultBMI;
     private ResourceBundle resources;
+    private Locale currentLocale;
+
+
+    private Map<String, String> localizedStrings;
     @FXML
     private Label lblWeignt;
 
@@ -80,18 +86,28 @@ public class BMIController {
         loadLanguage(new Locale("en", "US"));
     }
 
+
     private void loadLanguage(Locale locale) {
-        resources = ResourceBundle.getBundle("messages", locale);
-        lblWeignt.setText(resources.getString("lblWeignt.text"));
-        lblHeight.setText(resources.getString("lblHeight.text"));
-        if (resultBMI != 0) lblResult.setText(resources.getString("lblResult.text") + String.format(" %.2f", resultBMI));
-        lbLocalTime.setText(resources.getString("lbLocalTime.text"));
+        currentLocale = locale;
+        lblResult.setText("");
+        localizedStrings = LocalizationService.getLocalizedStrings(locale);
+        lblWeignt.setText(localizedStrings.getOrDefault("weight", "Weight"));
+        lblHeight.setText(localizedStrings.getOrDefault("height", "Height"));
+        btnCalculate.setText(localizedStrings.getOrDefault("calculate", "Calculate"));
+    }
 
-        btnCalculate.setText(resources.getString("btnCalculate.text"));
-
-        button1.setText(resources.getString("button1.text"));
-        button2.setText(resources.getString("button2.text"));
-        button3.setText(resources.getString("button3.text"));
-        button4.setText(resources.getString("button4.text"));
+    public void onCalculateClick(ActionEvent actionEvent) {
+        try {
+            double weight = Double.parseDouble(tfWeight.getText());
+            double height = Double.parseDouble(tfHeight.getText()) / 100.0;
+            double bmi = weight / (height * height);
+            DecimalFormat df = new DecimalFormat("#0.00");
+            lblResult.setText(localizedStrings.getOrDefault("result", "Your BMI is") + " " + df.format(bmi));
+            // Save to database
+            String language = currentLocale.getLanguage();
+            BMIResultService.saveResult(weight, height * 100, bmi, language);
+        } catch (NumberFormatException e) {
+            lblResult.setText(localizedStrings.getOrDefault("invalid", "Invalid input"));
+        }
     }
 }
